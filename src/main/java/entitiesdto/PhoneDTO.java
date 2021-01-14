@@ -2,7 +2,7 @@ package entitiesdto;
 
 import entities.Phone;
 
-class PhoneDTO {
+public class PhoneDTO {
 
     public String number;
 

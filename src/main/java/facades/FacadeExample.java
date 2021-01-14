@@ -1,14 +1,19 @@
 package facades;
 
 import entities.Address;
+import entities.CityInfo;
 import entities.Hobby;
 import entities.Phone;
 import entities.RenameMe;
 import entities.Role;
 import entities.User;
+import entitiesdto.CreateUserDTO;
 import entitiesdto.HobbyDTO;
+import entitiesdto.PhoneDTO;
 import entitiesdto.UserDTO;
 import entitiesdto.UsersDTO;
+import errorhandling.UserNotFoundException;
+import java.util.ArrayList;
 import java.util.List;
 import javax.persistence.EntityManager;
 import javax.persistence.EntityManagerFactory;
@@ -17,10 +22,6 @@ import javax.persistence.Query;
 import javax.persistence.TypedQuery;
 import utils.EMF_Creator;
 
-/**
- *
- * Rename Class to a relevant name Add add relevant facade methods
- */
 public class FacadeExample implements UserInterface {
 
     private static FacadeExample instance;
@@ -54,13 +55,16 @@ public class FacadeExample implements UserInterface {
     }
 
     @Override
-    public UserDTO getUserByPhone(String number) {
+    public UserDTO getUserByPhone(String number) throws UserNotFoundException {
 
         EntityManager em = emf.createEntityManager();
         try {
             TypedQuery query = em.createQuery("SELECT u FROM User u JOIN u.phones p WHERE p.number = :number", User.class);
             query.setParameter("number", number);
             User user = (User) query.getSingleResult();
+            if (user == null) {
+                throw new UserNotFoundException("Could not find a user with the given number");
+            }
             return new UserDTO(user);
         } finally {
             em.close();
@@ -68,12 +72,15 @@ public class FacadeExample implements UserInterface {
     }
 
     @Override
-    public UsersDTO getAllUsersByHobby(String hobby) {
+    public UsersDTO getAllUsersByHobby(String hobby) throws UserNotFoundException {
         EntityManager em = emf.createEntityManager();
         try {
             TypedQuery query = em.createQuery("SELECT u FROM User u JOIN u.hobbies h WHERE h.description = :hobby", User.class);
             query.setParameter("hobby", hobby);
             List<User> users = query.getResultList();
+            if (users == null) {
+                throw new UserNotFoundException("Could not find any users with the given hobby");
+            }
             return new UsersDTO(users);
         } finally {
             em.close();
@@ -81,12 +88,17 @@ public class FacadeExample implements UserInterface {
     }
 
     @Override
-    public UsersDTO getAllUsersByCity(String city) {
+    public UsersDTO getAllUsersByCity(String city) throws UserNotFoundException {
         EntityManager em = emf.createEntityManager();
         try {
             TypedQuery query = em.createQuery("SELECT u FROM User u JOIN u.address.cityInfo c WHERE c.city = :city", User.class);
             query.setParameter("city", city);
             List<User> users = query.getResultList();
+
+            if (users == null) {
+                throw new UserNotFoundException("Could not find any users with the given city");
+            }
+
             return new UsersDTO(users);
         } finally {
             em.close();
@@ -108,23 +120,42 @@ public class FacadeExample implements UserInterface {
     }
 
     @Override
-    public List<String> getAllZipsInDenmark() {
+    public UsersDTO getAllUsers() throws UserNotFoundException {
+        EntityManager em = emf.createEntityManager();
+        try {
+            TypedQuery query = em.createQuery("SELECT u FROM User u", User.class);
+            List<User> users = query.getResultList();
+            if (users == null) {
+                throw new UserNotFoundException("Could not find any users ");
+            }
+            return new UsersDTO(users);
+        } finally {
+            em.close();
+        }
+    }
 
+    @Override
+    public List<Long> getAllZipsInDenmark() {
         EntityManager em = emf.createEntityManager();
         try {
             Query query = em.createQuery("Select c.zip FROM CityInfo c");
-            List<String> zips = query.getResultList();
+            List<Long> zips = query.getResultList();
             return zips;
         } finally {
             em.close();
         }
     }
- // Virker ikke helt men vi gider ikke bruge mere tid på det
+    // Virker ikke helt men vi gider ikke bruge mere tid på det
+
     @Override
-    public UserDTO editUser(UserDTO userDTO) {
+    public UserDTO editUser(UserDTO userDTO) throws UserNotFoundException {
         EntityManager em = emf.createEntityManager();
 
         User user = em.find(User.class, userDTO.userName);
+
+        if (user == null) {
+            throw new UserNotFoundException("Could not find a user with the given username");
+        }
 
         String editedHobby = "";
 
@@ -133,7 +164,6 @@ public class FacadeExample implements UserInterface {
             em.getTransaction().begin();
             user.setUserName(userDTO.userName);
             user.getAddress().setStreet(userDTO.street);
-            
 
             for (Hobby hobby : user.getHobbies()) {
                 for (HobbyDTO hobbyDTO : userDTO.hobbies) {
@@ -141,7 +171,7 @@ public class FacadeExample implements UserInterface {
 
                         editedHobby = hobbyDTO.description;
                         hobby.setDescription(editedHobby);
-                        
+
                     }
                 }
             }
@@ -158,11 +188,13 @@ public class FacadeExample implements UserInterface {
     }
 
     @Override
-    public UserDTO deleteUser(UserDTO userDTO) {
+    public UserDTO deleteUser(UserDTO userDTO) throws UserNotFoundException {
         EntityManager em = emf.createEntityManager();
         try {
             User user = em.find(User.class, userDTO.userName);
-
+            if (user == null) {
+                throw new UserNotFoundException("Could not find a user with the given username");
+            }
             em.getTransaction().begin();
 
             for (Phone p : user.getPhones()) {
@@ -181,10 +213,16 @@ public class FacadeExample implements UserInterface {
 
             if (user.getAddress().getUsers().size() <= 1) {
                 em.remove(user.getAddress());
+
             } else {
                 user.getAddress().getUsers().remove(user);
             }
-            em.remove(user.getAddress().getCityInfo());
+            if (user.getAddress().getCityInfo().getAddresses().size() <= 1) {
+                em.remove(user.getAddress().getCityInfo());
+            } else {
+                user.getAddress().getCityInfo().getAddresses().remove(user.getAddress());
+            }
+
             em.getTransaction().commit();
 
             return new UserDTO(user);
@@ -193,18 +231,50 @@ public class FacadeExample implements UserInterface {
         }
     }
 
+    @Override
+    public UserDTO createUser(CreateUserDTO createUserDTO) {
+        EntityManager em = emf.createEntityManager();
+
+        em.getTransaction().begin();
+
+        CityInfo cityInfo = em.find(CityInfo.class, createUserDTO.zip);
+
+        if (cityInfo == null) {
+            cityInfo = new CityInfo(createUserDTO.zip, createUserDTO.street);
+        }
+
+        Address address = new Address(createUserDTO.street);
+        
+        
+        
+        User user = new User(createUserDTO.userName, createUserDTO.password);
+        Role role = em.find(Role.class, "user");
+
+        for (HobbyDTO h : createUserDTO.hobbies) {
+            user.addHobby(new Hobby(h.description));
+        }
+
+        for (PhoneDTO p : createUserDTO.phones) {
+            user.addPhone(new Phone(p.number));
+        }
+
+        address.setCityInfo(cityInfo);
+        user.setAddress(address);
+        user.addRole(role);
+
+        em.persist(user);
+
+        em.getTransaction().commit();
+
+        return new UserDTO(user);
+
+    }
+
     public static void main(String[] args) {
-        utils.SetupTestUsers.setUpUsers();
+        //utils.SetupTestUsers.setUpUsers();
         EntityManagerFactory EMF = EMF_Creator.createEntityManagerFactory();
         FacadeExample fe = FacadeExample.getFacadeExample(EMF);
         EntityManager em = emf.createEntityManager();
-        User user1 = em.find(User.class, "user");
-         user1.getHobbies().get(0).setDescription("fodbold");
-        user1.getHobbies().set(0, user1.getHobbies().get(0));
-        System.out.println(user1.getUserName());
-        UserDTO user = new UserDTO(user1);
-
-        fe.editUser(user);
 
     }
 

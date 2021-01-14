@@ -2,6 +2,8 @@ package rest;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.nimbusds.jose.shaded.json.JSONArray;
+import com.nimbusds.jose.shaded.json.JSONObject;
 import entities.Address;
 import entities.CityInfo;
 import entities.Hobby;
@@ -9,6 +11,8 @@ import entities.Phone;
 import entities.RenameMe;
 import entities.Role;
 import entities.User;
+import entitiesdto.HobbyDTO;
+import entitiesdto.PhoneDTO;
 import entitiesdto.UserDTO;
 import utils.EMF_Creator;
 import io.restassured.RestAssured;
@@ -35,7 +39,7 @@ import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
 //Uncomment the line below, to temporarily disable this test
 
-//@Disabled
+@Disabled
 public class RenameMeResourceTest {
 
     private static final int SERVER_PORT = 7777;
@@ -75,7 +79,7 @@ public class RenameMeResourceTest {
         admin = new User("admin", "testadmin");
         both = new User("user_admin", "testuseradmin");
         a1 = new Address("Street");
-        c1 = new CityInfo("2630", "Taastrup");
+        c1 = new CityInfo(2630, "Taastrup");
         p1 = new Phone("56789");
         p2 = new Phone("12345");
         h1 = new Hobby("Fitness");
@@ -85,22 +89,22 @@ public class RenameMeResourceTest {
         try {
 
             em.getTransaction().begin();
-            em.createNativeQuery("DELETE FROM PHONE").executeUpdate();
+            /* em.createNativeQuery("DELETE FROM PHONE").executeUpdate();
             em.createNativeQuery("DELETE FROM HOBBY_users").executeUpdate();
             em.createNativeQuery("DELETE FROM user_roles").executeUpdate();
             em.createNativeQuery("DELETE FROM users").executeUpdate();
             em.createNativeQuery("DELETE FROM ADDRESS").executeUpdate();
             em.createNativeQuery("DELETE FROM CITYINFO").executeUpdate();
             em.createNativeQuery("DELETE FROM roles").executeUpdate();
-            em.createNativeQuery("DELETE FROM HOBBY").executeUpdate();
+            em.createNativeQuery("DELETE FROM HOBBY").executeUpdate();*/
 
             user.addHobby(h1);
-            user.setPhone(p1);
+            user.addPhone(p1);
             a1.setCityInfo(c1);
             user.setAddress(a1);
 
             admin.addHobby(h1);
-            admin.setPhone(p2);
+            admin.addPhone(p2);
             admin.setAddress(a1);
 
             user.addRole(userRole);
@@ -154,7 +158,7 @@ public class RenameMeResourceTest {
 
     @Disabled
     @Test
-    @Order(1)
+   
     public void testParrallel() throws Exception {
         given()
                 .contentType("application/json")
@@ -171,7 +175,7 @@ public class RenameMeResourceTest {
 
     @Disabled
     @Test
-    @Order(2)
+    
     public void testCached() throws Exception {
         given()
                 .contentType("application/json")
@@ -184,7 +188,7 @@ public class RenameMeResourceTest {
                 .body("starshipName", equalTo("Star Destroyer"))
                 .body("vehicleName", equalTo("Sand Crawler"));
     }
-
+    @Order(2)
     @Test
     public void testGetUserByPhone() throws Exception {
         given()
@@ -194,12 +198,12 @@ public class RenameMeResourceTest {
                 .statusCode(HttpStatus.OK_200.getStatusCode())
                 .body("userName", equalTo("admin"))
                 .body("street", equalTo("Street"))
-                .body("zip", equalTo("2630"))
+                .body("zip", equalTo(2630))
                 .body("city", equalTo("Taastrup"))
                 .body("hobbies.description", hasItems("Fitness"))
                 .body("phones.number", hasItems("12345"));
     }
-
+    @Order(1)
     @Test
     public void testGetUsersByCity() throws Exception {
         List<UserDTO> usersDTO;
@@ -217,17 +221,61 @@ public class RenameMeResourceTest {
         assertThat(usersDTO, containsInAnyOrder(u1, u2));
 
     }
-
+    @Order(3)
     @Test
     public void testDeleteUser() throws Exception {
+
+        JSONObject request = new JSONObject();
+        JSONArray hobbies = new JSONArray();
+        JSONArray phones = new JSONArray();
+
+        hobbies.add(new HobbyDTO(new Hobby("fodbold")));
+
+        phones.add(new PhoneDTO(new Phone("42913009")));
+
+        request.put("userName", "admin");
+        request.put("street", "Street");
+        request.put("zip", "2630");
+        request.put("city", "Taastrup");
+        request.put("hobbies", hobbies);
+        request.put("phones", phones);
+
         given()
                 .contentType("application/json")
                 .body(new UserDTO(admin))
                 .when()
                 .delete("/info/deleteuser")
-                .then();
-                //.body("userName", equalTo("admin"));
-               
+                .then()
+                .assertThat()
+                .statusCode((HttpStatus.OK_200.getStatusCode()));
+
+    }
+    
+   @Order(4)
+    @Test
+    public void testCreateUser() throws Exception {
+
+        User user = new User("hej", "noooo");
+
+        Address a1 = new Address("Kaskaderne");
+        CityInfo c1 = new CityInfo(2630, "Hillerød");
+        Phone p1 = new Phone("5123132131");
+        Hobby h1 = new Hobby("Fiske");
+        Role userRole = new Role("user");
+
+        a1.setCityInfo(c1);
+        user.setAddress(a1);
+        user.addPhone(p1);
+        user.addHobby(h1);
+
+        given()
+                .contentType("application/json")
+                .body(new UserDTO(user))
+                .when()
+                .post("/info/createuser")
+                .then()
+                .assertThat()
+                .statusCode((HttpStatus.OK_200.getStatusCode()));
 
     }
 

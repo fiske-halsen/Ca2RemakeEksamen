@@ -26,8 +26,8 @@ public class SetupTestUsers {
         User admin = new User("admin", "testadmin");
         User both = new User("user_admin", "testuseradmin");
         Address a1 = new Address("Street");
-        CityInfo c1 = new CityInfo("2630", "Taastrup");
-        Phone p1 = new Phone("213213213");
+        CityInfo c1 = new CityInfo(2630, "Taastrup");
+        Phone p1 = new Phone("26154886");
         Hobby h1 = new Hobby("Fitness");
 
         if (admin.getUserPass().equals("test") || user.getUserPass().equals("test") || both.getUserPass().equals("test")) {
@@ -35,13 +35,13 @@ public class SetupTestUsers {
         }
 
         user.addHobby(h1);
-        user.setPhone(p1);
+        user.addPhone(p1);
         a1.setCityInfo(c1);
         user.setAddress(a1);
         
         
         admin.addHobby(h1);
-        admin.setPhone(new Phone("12321321321"));
+        admin.addPhone(new Phone("42913009"));
         admin.setAddress(a1);
         
         

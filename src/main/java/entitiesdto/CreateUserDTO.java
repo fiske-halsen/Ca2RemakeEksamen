@@ -1,3 +1,8 @@
+/*
+ * To change this license header, choose License Headers in Project Properties.
+ * To change this template file, choose Tools | Templates
+ * and open the template in the editor.
+ */
 package entitiesdto;
 
 import entities.Hobby;
@@ -7,17 +12,19 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
-public class UserDTO {
+public class CreateUserDTO {
 
     public String userName;
+    public String password;
     public String street;
     public long zip;
     public String city;
     public List<HobbyDTO> hobbies = new ArrayList();
     public List<PhoneDTO> phones = new ArrayList();
 
-    public UserDTO(User user) {
+    public CreateUserDTO(User user) {
         this.userName = user.getUserName();
+        this.password = user.getUserPass();
         this.street = user.getAddress().getStreet();
         this.zip = user.getAddress().getCityInfo().getZip();
         this.city = user.getAddress().getCityInfo().getCity();

@@ -39,6 +39,7 @@ public class User implements Serializable {
     @JoinTable(name = "user_roles", joinColumns = {
         @JoinColumn(name = "user_name", referencedColumnName = "user_name")}, inverseJoinColumns = {
         @JoinColumn(name = "role_name", referencedColumnName = "role_name")})
+    
     @ManyToMany
     private List<Role> roleList = new ArrayList<>();
 
@@ -55,7 +56,7 @@ public class User implements Serializable {
         return phones;
     }
     
-    public void setPhone(Phone phone) {
+    public void addPhone(Phone phone) {
         this.phones = phones;
         if (phone != null) {
             phone.setUser(this);
