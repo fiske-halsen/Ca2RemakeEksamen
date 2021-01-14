@@ -4,7 +4,7 @@ Clone this startcode, and the matching startcode for the client-side: https://gi
 Before you begin, make sure that your docker-containers are running locally. Go to pom file and change the remote-server, to ready your ci-pipeline
 
 
-
+s
 1. Open the project, in your preffered editor. Security and JWT is already implementet, and dosen't need to be editet
 2. Modify the persistance file, if nescesary, to match your desirable database
 3. Create a repo, and push up the project. Setup Travis, and remember to add a remote password and username. If travis fails, use command: [mvn clean test -Dremote.user=USER -Dremote.password=PW tomcat7:deploy]
